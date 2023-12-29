@@ -77,7 +77,7 @@ fn list_profiles() -> Result<Vec<(String, UserProfile)>, String> {
 // Prepare the login by generating a challenge (the SIWE message) and returning it to the caller.
 #[update]
 fn prepare_login(address: String) -> Result<String, String> {
-    ic_siwe::prepare_login(&address).map(|m| m.into())
+    ic_siwe::login::prepare_login(&address).map(|m| m.into())
 }
 
 // Login the user by verifying the signature of the SIWE message. If the signature is valid, the
@@ -85,11 +85,11 @@ fn prepare_login(address: String) -> Result<String, String> {
 // step.
 #[update]
 fn login(signature: String, address: String, session_key: ByteBuf) -> Result<ByteBuf, String> {
-    match ic_siwe::login(&signature, &address, session_key) {
+    match ic_siwe::login::login(&signature, &address, session_key) {
         Ok(pk) => {
             // Convert the public key to a principal as this is the principal that will be used
             // for authentication.
-            let principal = Principal::self_authenticating(&pk).to_string();
+            let principal = Principal::self_authenticating(&pk.user_canister_pubkey).to_string();
 
             // Create a new user profile for the user if it doesn't exist yet.
             USER_PROFILES.with(|p| {
@@ -107,7 +107,7 @@ fn login(signature: String, address: String, session_key: ByteBuf) -> Result<Byt
                 }
             });
 
-            Ok(pk.into())
+            Ok(pk.user_canister_pubkey.into())
         }
         Err(e) => Err(e.to_string()),
     }
@@ -118,14 +118,15 @@ fn login(signature: String, address: String, session_key: ByteBuf) -> Result<Byt
 fn get_delegation(
     address: String,
     session_key: ByteBuf,
-) -> Result<ic_siwe::SignedDelegation, String> {
-    ic_siwe::get_delegation(&address, session_key)
+    expiration: u64,
+) -> Result<ic_siwe::delegation::SignedDelegationCandidType, String> {
+    ic_siwe::login::get_delegation(&address, session_key, expiration)
 }
 
 // ic-siwe provides default values for all settings except the domain, uri and salt.
 fn siwe_init() {
     ic_siwe::init(
-        ic_siwe::SettingsBuilder::new("127.0.0.1", "http://127.0.0.1:5173", "salt")
+        ic_siwe::settings::SettingsBuilder::new("127.0.0.1", "http://127.0.0.1:4943", "salt")
             .scheme("http")
             .statement("Login to the app")
             .sign_in_expires_in(Duration::from_secs(60 * 5).as_nanos() as u64) // 5 minutes

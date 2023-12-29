@@ -55,6 +55,7 @@ export function IdentityProvider({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [identity, setIdentity] = useState<DelegationIdentity>();
   const [identityAddress, setIdentityAddress] = useState<string>();
+  const [expirationTime, setExpirationTime] = useState<bigint>();
   const [delegationChain, setDelegationChain] = useState<DelegationChain>();
 
   /**
@@ -94,6 +95,16 @@ export function IdentityProvider({
     setIsLoggingIn(true);
     anonymousActor.prepare_login(address).then((response) => {
       if ("Ok" in response) {
+        console.log('response', response.Ok);
+        const timestampRegex = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}Z)/g;
+
+        const timestampMatch: RegExpMatchArray | null = response.Ok.match(timestampRegex);
+        const nanoseconds: number | undefined = timestampMatch ? new Date(timestampMatch[1]).getTime() * 1e6 : undefined;
+  
+        if (nanoseconds) {
+          const nanosecondsInBigInt = BigInt(nanoseconds);
+          setExpirationTime(nanosecondsInBigInt);
+        }
         const siweMessage = response.Ok;
         signMessage({ message: siweMessage });
       } else {
@@ -102,207 +113,214 @@ export function IdentityProvider({
       }
     });
   }
+  
+/**
+ * Clears the identity from the state and local storage. Effectively "logs the
+ * user out".
+ */
+function clear() {
+  setIdentity(undefined);
+  setIdentityAddress(undefined);
+  setDelegationChain(undefined);
+  localStorage.removeItem(STATE_STORAGE_KEY);
+}
 
-  /**
-   * Clears the identity from the state and local storage. Effectively "logs the
-   * user out".
-   */
-  function clear() {
-    setIdentity(undefined);
-    setIdentityAddress(undefined);
-    setDelegationChain(undefined);
-    localStorage.removeItem(STATE_STORAGE_KEY);
+/**
+ * Load the identity from local storage on mount.
+ */
+useEffect(() => {
+  try {
+    load();
+  } catch (e) {
+    // Ignore errors
+  }
+}, []);
+
+/**
+ * Create an anonymous actor on mount. This actor is used during the login
+ * process.
+ */
+useEffect(() => {
+  (async () => {
+    if (!idlFactory || !canisterId) return;
+    const agent = new HttpAgent({ ...httpAgentOptions });
+
+    if (process.env.DFX_NETWORK !== "ic") {
+      agent.fetchRootKey().catch((err) => {
+        console.warn(
+          "Unable to fetch root key. Check to ensure that your local replica is running"
+        );
+        console.error(err);
+      });
+    }
+
+    setAnonymousActor(
+      Actor.createActor<SiweService>(idlFactory, {
+        agent,
+        canisterId,
+        ...actorOptions,
+      })
+    );
+  })();
+}, [idlFactory, canisterId, httpAgentOptions, actorOptions]);
+
+/**
+ * Once a signed SIWE message is received, login to the backend.
+ */
+useEffect(() => {
+  async function callLogin(
+    data: `0x${string}` | undefined,
+    address: `0x${string}` | undefined,
+    sessionPublicKey: DerEncodedPublicKey
+  ) {
+    if (!anonymousActor || !data || !address) return;
+
+    const loginReponse = await anonymousActor.login(
+      data,
+      address,
+      new Uint8Array(sessionPublicKey)
+    );
+
+    if ("Err" in loginReponse) {
+      console.error(loginReponse.Err);
+      setIsLoggingIn(false);
+      return;
+    }
+
+    return loginReponse.Ok;
+  }
+
+  async function callGetDelegation(
+    address: `0x${string}` | undefined,
+    sessionPublicKey: DerEncodedPublicKey,
+    expiration: bigint,
+  ) {
+    if (!anonymousActor || !address) return;
+
+    const response = await anonymousActor.get_delegation(
+      address,
+      new Uint8Array(sessionPublicKey),
+      expiration
+    );
+
+    if ("Err" in response) {
+      console.error(response.Err);
+      setIsLoggingIn(false);
+      return;
+    }
+
+    return response.Ok;
+  }
+
+  function asSignature(signature: Uint8Array | number[]): Signature {
+    const arrayBuffer: ArrayBuffer = (signature as Uint8Array).buffer;
+    const s: Signature = arrayBuffer as Signature;
+    s.__signature__ = undefined;
+    return s;
+  }
+
+  function asDerEncodedPublicKey(
+    publicKey: Uint8Array | number[]
+  ): DerEncodedPublicKey {
+    const arrayBuffer: ArrayBuffer = (publicKey as Uint8Array).buffer;
+    const pk: DerEncodedPublicKey = arrayBuffer as DerEncodedPublicKey;
+    pk.__derEncodedPublicKey__ = undefined;
+    return pk;
   }
 
   /**
-   * Load the identity from local storage on mount.
+   * 1. Generate a new session identity.
+   * 2. Call the backend's login method with the signed SIWE message.
+   * 3. Call the backend's get_delegation method to get the delegation.
+   * 4. Create a new delegation chain from the delegation.
+   * 5. Create a new delegation identity from the session identity and the
+   *   delegation chain.
    */
-  useEffect(() => {
-    try {
-      load();
-    } catch (e) {
-      // Ignore errors
-    }
-  }, []);
+  (async () => {
+    if (!data || !address) return;
+    if (isLoggingIn) {
+      const sessionIdentity = Ed25519KeyIdentity.generate();
+      const sessionPublicKey = sessionIdentity.getPublicKey().toDer();
 
-  /**
-   * Create an anonymous actor on mount. This actor is used during the login
-   * process.
-   */
-  useEffect(() => {
-    (async () => {
-      if (!idlFactory || !canisterId) return;
-      const agent = new HttpAgent({ ...httpAgentOptions });
-
-      if (process.env.DFX_NETWORK !== "ic") {
-        agent.fetchRootKey().catch((err) => {
-          console.warn(
-            "Unable to fetch root key. Check to ensure that your local replica is running"
-          );
-          console.error(err);
-        });
-      }
-
-      setAnonymousActor(
-        Actor.createActor<SiweService>(idlFactory, {
-          agent,
-          canisterId,
-          ...actorOptions,
-        })
-      );
-    })();
-  }, [idlFactory, canisterId, httpAgentOptions, actorOptions]);
-
-  /**
-   * Once a signed SIWE message is received, login to the backend.
-   */
-  useEffect(() => {
-    async function callLogin(
-      data: `0x${string}` | undefined,
-      address: `0x${string}` | undefined,
-      sessionPublicKey: DerEncodedPublicKey
-    ) {
-      if (!anonymousActor || !data || !address) return;
-
-      const loginReponse = await anonymousActor.login(
+      const userCanisterPublicKey = await callLogin(
         data,
         address,
-        new Uint8Array(sessionPublicKey)
+        sessionPublicKey
       );
 
-      if ("Err" in loginReponse) {
-        console.error(loginReponse.Err);
-        setIsLoggingIn(false);
-        return;
-      }
+      if (!userCanisterPublicKey || !expirationTime) return;
 
-      return loginReponse.Ok;
-    }
+      const expiration = expirationTime;
 
-    async function callGetDelegation(
-      address: `0x${string}` | undefined,
-      sessionPublicKey: DerEncodedPublicKey
-    ) {
-      if (!anonymousActor || !address) return;
-
-      const response = await anonymousActor.get_delegation(
+      const signedDelegation = await callGetDelegation(
         address,
-        new Uint8Array(sessionPublicKey)
+        sessionPublicKey,
+        expiration
       );
 
-      if ("Err" in response) {
-        console.error(response.Err);
-        setIsLoggingIn(false);
-        return;
-      }
+      if (!signedDelegation) return;
 
-      return response.Ok;
-    }
+      const delegations: SignedDelegation[] = [
+        {
+          delegation: new Delegation(
+            signedDelegation.delegation.pubkey,
+            signedDelegation.delegation.expiration
+          ),
+          signature: asSignature(signedDelegation.signature),
+        },
+      ];
 
-    function asSignature(signature: Uint8Array | number[]): Signature {
-      const arrayBuffer: ArrayBuffer = (signature as Uint8Array).buffer;
-      const s: Signature = arrayBuffer as Signature;
-      s.__signature__ = undefined;
-      return s;
-    }
+      const delegationChain = DelegationChain.fromDelegations(
+        delegations,
+        asDerEncodedPublicKey(userCanisterPublicKey)
+      );
 
-    function asDerEncodedPublicKey(
-      publicKey: Uint8Array | number[]
-    ): DerEncodedPublicKey {
-      const arrayBuffer: ArrayBuffer = (publicKey as Uint8Array).buffer;
-      const pk: DerEncodedPublicKey = arrayBuffer as DerEncodedPublicKey;
-      pk.__derEncodedPublicKey__ = undefined;
-      return pk;
-    }
+      const identity = DelegationIdentity.fromDelegation(
+        sessionIdentity,
+        delegationChain
+      );
 
-    /**
-     * 1. Generate a new session identity.
-     * 2. Call the backend's login method with the signed SIWE message.
-     * 3. Call the backend's get_delegation method to get the delegation.
-     * 4. Create a new delegation chain from the delegation.
-     * 5. Create a new delegation identity from the session identity and the
-     *   delegation chain.
-     */
-    (async () => {
-      if (!data || !address) return;
-      if (isLoggingIn) {
-        const sessionIdentity = Ed25519KeyIdentity.generate();
-        const sessionPublicKey = sessionIdentity.getPublicKey().toDer();
+      localStorage.setItem(
+        STATE_STORAGE_KEY,
+        JSON.stringify({
+          address: address,
+          sessionIdentity: sessionIdentity.toJSON(),
+          delegationChain: delegationChain.toJSON(),
+        })
+      );
 
-        const userCanisterPublicKey = await callLogin(
-          data,
-          address,
-          sessionPublicKey
-        );
-        if (!userCanisterPublicKey) return;
-
-        const signedDelegation = await callGetDelegation(
-          address,
-          sessionPublicKey
-        );
-        if (!signedDelegation) return;
-
-        const delegations: SignedDelegation[] = [
-          {
-            delegation: new Delegation(
-              signedDelegation.delegation.pubkey,
-              signedDelegation.delegation.expiration
-            ),
-            signature: asSignature(signedDelegation.signature),
-          },
-        ];
-
-        const delegationChain = DelegationChain.fromDelegations(
-          delegations,
-          asDerEncodedPublicKey(userCanisterPublicKey)
-        );
-
-        const identity = DelegationIdentity.fromDelegation(
-          sessionIdentity,
-          delegationChain
-        );
-
-        localStorage.setItem(
-          STATE_STORAGE_KEY,
-          JSON.stringify({
-            address: address,
-            sessionIdentity: sessionIdentity.toJSON(),
-            delegationChain: delegationChain.toJSON(),
-          })
-        );
-
-        reset();
-        setDelegationChain(delegationChain);
-        setIdentity(identity);
-        setIdentityAddress(address);
-        setIsLoggingIn(false);
-      }
-    })();
-  }, [data, address, isLoggingIn, anonymousActor, reset]);
-
-  /**
-   * If an error occurs during the login process, stop the loading indicator.
-   */
-  useEffect(() => {
-    if (isError) {
+      reset();
+      setDelegationChain(delegationChain);
+      setIdentity(identity);
+      setIdentityAddress(address);
       setIsLoggingIn(false);
     }
-  }, [isError, setIsLoggingIn]);
+  })();
+}, [data, address, isLoggingIn, anonymousActor, reset]);
 
-  return (
-    <IdentityContext.Provider
-      value={{
-        login,
-        clear,
-        isLoading,
-        isLoggingIn,
-        isError,
-        delegationChain,
-        identity,
-        identityAddress,
-      }}
-    >
-      {children}
-    </IdentityContext.Provider>
-  );
+/**
+ * If an error occurs during the login process, stop the loading indicator.
+ */
+useEffect(() => {
+  if (isError) {
+    setIsLoggingIn(false);
+  }
+}, [isError, setIsLoggingIn]);
+
+return (
+  <IdentityContext.Provider
+    value={{
+      login,
+      clear,
+      isLoading,
+      isLoggingIn,
+      isError,
+      delegationChain,
+      identity,
+      identityAddress,
+    }}
+  >
+    {children}
+  </IdentityContext.Provider>
+);
 }

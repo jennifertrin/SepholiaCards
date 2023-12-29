@@ -19,12 +19,16 @@ import { WagmiConfig } from "wagmi";
 import { _SERVICE } from "../../declarations/react_demo_backend/react_demo_backend.did";
 import { createActorContext } from "./ic/ActorContext.tsx";
 import { createUseActorHook } from "./ic/useActor.tsx";
+import { ThirdwebProvider } from "@thirdweb-dev/react";
+import { Sepolia } from "@thirdweb-dev/chains";
+
 
 export const actorContext = createActorContext<_SERVICE>();
 export const useActor = createUseActorHook<_SERVICE>();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+     <ThirdwebProvider activeChain={Sepolia} clientId="15a2bbda3b9a72506288c44c7ba167d3">
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider
         chains={chains}
@@ -50,5 +54,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </IdentityProvider>
       </RainbowKitProvider>
     </WagmiConfig>
+    </ThirdwebProvider>
   </React.StrictMode>
 );

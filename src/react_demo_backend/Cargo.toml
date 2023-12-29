@@ -7,9 +7,11 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-candid = "0.10.0"
-ic-cdk = "0.12.0"
-ic-siwe = { path = "../../../ic-siwe-rust" }
+candid = "0.9.11"
+candid_derive = "0.6.4"
+ic-cdk = "0.11.3"
+log = "0.4"
+ic_siwe = { path = "../../../ic-siwe-rust/packages/ic_siwe" }
 serde = "1.0.193"
 serde_json = "1.0.108"
 ic-stable-structures = "0.6.0"

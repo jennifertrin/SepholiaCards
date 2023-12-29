@@ -45,6 +45,7 @@ type PublicKey = blob;
 type Timestamp = nat64;
 type Address = text;
 type SessionKey = PublicKey;
+type Expiration = nat64;
 type SiweSignature = text;
 type SiweMessage = text;
 type CanisterPublicKey = PublicKey;
@@ -84,5 +85,5 @@ service : {
   "list_active_sessions" : () -> (ListActiveSessionsResponse);
   "prepare_login" : (Address) -> (PrepareLoginResponse);
   "login" : (SiweSignature, Address, SessionKey) -> (LoginResponse);
-  "get_delegation" : (Address, SessionKey) -> (GetDelegationResponse) query;
+  "get_delegation" : (Address, SessionKey, Timestamp) -> (GetDelegationResponse) query;
 };

@@ -13,7 +13,7 @@ export default function Header() {
         <EthButton />
         <SessionButton />
       </div>
-      <div className="block text-xl font-bold text-center md:hidden">
+      <div className="block text-md font-bold text-center md:hidden">
         Internet Computer + React + Sign In With Ethereum
       </div>
     </div>
