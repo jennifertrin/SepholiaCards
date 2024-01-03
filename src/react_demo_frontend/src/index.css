@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 html {
-  @apply bg-zinc-800 text-zinc-300 font-sans;
+  @apply bg-white text-zinc-300 font-sans;
 }
 
 a {
-  @apply underline text-cyan-600;
+  @apply underline text-cyan-800;
 }
 
 [id^="headlessui-dialog-title-"] {

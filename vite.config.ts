@@ -19,11 +19,11 @@ export default defineConfig({
     outDir: "../../dist",
   },
   server: {
-    host: "127.0.0.1",
+    host: "localhost",
     proxy: {
       // Proxy all http requests made to /api to the running dfx instance
       "/api": {
-        target: `http://127.0.0.1:4943`,
+        target: `http://localhost:4943`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, "/api"),
       },
