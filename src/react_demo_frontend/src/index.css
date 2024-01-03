@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 html {
-  @apply bg-white text-zinc-300 font-sans;
+  @apply bg-white text-black font-sans;
 }
 
 a {

@@ -24,7 +24,7 @@ export default function PrincipalDialog({
         src="/ic.svg"
       />
       <HeadlessDialog.Title>Internet Computer Identity</HeadlessDialog.Title>
-      <div className="px-4 py-2 text-xs rounded-lg text-zinc-400 bg-zinc-900/50">
+      <div className="px-4 py-2 text-xs rounded-lg text-zinc-400 bg-zinc-400/50">
         <code>{identity?.getPrincipal().toString()}</code>
       </div>
       <div className="flex justify-center w-full gap-5">

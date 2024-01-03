@@ -3,6 +3,7 @@ import { useContract, useConnect, useClaimNFT, metamaskWallet } from "@thirdweb-
 import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 import { Sepolia } from "@thirdweb-dev/chains";
 import { providers } from 'ethers'
+import TokenGating from "../token_gating/TokenGating";
 
 export default function NftMint() {
     const [sentAddress, setSendAddress] = useState<string>("");
@@ -36,19 +37,23 @@ export default function NftMint() {
     }
 
     return (
-        <div className="w-full">
+        <div className="w-full flex flex-col gap-6">
             <img className="object-contain max-h-96 mx-auto" src="/image.jpg" />
-            <div className="border border-10 rounded-xl mt-6">
-                <div className="md:flex items-center block mx-auto mb-6 mt-8 px-6 gap-2">
+            <div>
+                <div className="md:flex items-center block mx-auto gap-2">
                     <div className="md:w-1/4 xl:ml-12 flex">
-                        <label className="block text-gray-500 font-bold md:text-right mb-1 md:mb-0 pr-4">
+                        <label className="block font-bold md:text-right mb-1 md:mb-0 pr-4">
                             To wallet address:
                         </label>
                     </div>
                     <div className="flex md:w-3/4">
-                        <input className="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500" id="send-wallet-address" type="text" placeholder="Ethereum wallet address starting with 0x..." onChange={event => setSendAddress(event.target.value)} />
+                        <input className="appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500" id="send-wallet-address" type="text" placeholder="Ethereum wallet address starting with 0x..." onChange={event => setSendAddress(event.target.value)} />
                     </div>
                 </div>
+            </div>
+            {sendButtonSuccess ? <p className="text-sm ...">The Card was sent!</p> : null}
+            <div className="flex mb-5">
+                <TokenGating />
             </div>
             <button
                 className="block w-1/2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 mx-auto my-10 rounded-xl disabled:bg-slate-200"
@@ -73,7 +78,6 @@ export default function NftMint() {
             >
                 {buttonLoad ? "Card Sending": "Send Card"}
             </button>
-            {sendButtonSuccess ? <p className="text-sm ...">The Card was sent!</p> : null}
         </div>
     );
 }

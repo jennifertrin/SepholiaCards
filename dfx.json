@@ -11,10 +11,23 @@
       "type": "rust"
     },
     "react_demo_frontend": {
-      "dependencies": ["react_demo_backend"],
+      "dependencies": ["react_demo_backend", "token_gating"],
       "source": ["dist"],
       "type": "assets",
       "build": ["npm run build"]
+    },
+    "vetkd_system_api": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/examples/raw/master/motoko/encrypted-notes-dapp-vetkd/vetkd_system_api.did",
+      "wasm": "https://github.com/dfinity/examples/raw/master/motoko/encrypted-notes-dapp-vetkd/vetkd_system_api.wasm"
+    },
+    "token_gating": {
+      "dependencies": [
+        "vetkd_system_api"
+      ],
+      "type": "rust",
+      "candid": "src/token_gating/token_gating.did",
+      "package": "token_gating"
     }
   },
   "output_env_file": ".env",
