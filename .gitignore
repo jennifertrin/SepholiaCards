@@ -43,4 +43,4 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
-*.local # Local configuration files
+*.local # Local configuration filesx

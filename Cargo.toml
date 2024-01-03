@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "src/react_demo_backend",
+    "src/token_gating"
 ]
 resolver = "2"

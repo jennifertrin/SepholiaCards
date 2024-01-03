@@ -47,7 +47,7 @@ export default function Button({
       className
     ),
     dark: twMerge(
-      "bg-zinc-900 hover:bg-zinc-950 disabled:bg-zinc-900",
+      "bg-zinc-400 hover:bg-zinc-500 disabled:bg-zinc-400",
       className
     ),
   }[variant || "primary"];

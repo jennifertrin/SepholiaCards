@@ -17,19 +17,15 @@ deploy-backend:
 	        }; \
 	    } \
 	)"
-	cat .env1 .env2 > .env
-	rm .env1 .env2
+	dfx deploy token_gating --output-env-file .env3
+	dfx deploy vetkd_system_api --output-env-file .env4
+	cat .env1 .env2 .env3 .env4 > .env
+	rm .env1 .env2 .env3 .env4
 
 deploy-frontend:
 	npm install
 	dfx generate ic_siwe_provider
 	dfx generate react_demo_backend
+	dfx generate token_gating
 	npm run dev
 
-clean:
-	rm -rf .dfx
-	rm -rf dist
-	rm -rf node_modules
-	rm -rf src/declarations
-	rm -f .env
-	cargo clean

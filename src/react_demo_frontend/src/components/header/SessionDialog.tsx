@@ -27,7 +27,7 @@ export default function SessionDialog({
   return (
     <Dialog className="max-w-xl" isOpen={isOpen} setIsOpen={setIsOpen}>
       <HeadlessDialog.Title>Session</HeadlessDialog.Title>
-      <div className="px-4 py-2 text-xs rounded-lg text-zinc-400 bg-zinc-900/50">
+      <div className="px-4 py-2 text-xs rounded-lg text-zinc-400 bg-zinc-400/50">
         <pre>
           {delegationChain?.delegations.map((delegation) => {
             const pubKey = arrayBufferToHex(delegation.delegation.pubkey);
@@ -48,7 +48,7 @@ export default function SessionDialog({
       </div>
       <EditProfile
         allwaysShow
-        className="w-full max-w-2xl border-zinc-700/50 border-[1px] bg-zinc-900 drop-shadow-xl rounded-3xl flex flex-col items-center p-8"
+        className="w-full max-w-2xl border-zinc-700/50 border-[1px] bg-zinc-400 drop-shadow-xl rounded-3xl flex flex-col items-center p-8"
       />
 
       <div className="flex justify-center w-full gap-5">
