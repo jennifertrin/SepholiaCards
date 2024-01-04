@@ -93,15 +93,12 @@ thread_local! {
 
 fn caller() -> Principal {
     let caller = ic_cdk::caller();
-    if caller == Principal::anonymous() {
-        panic!("Anonymous principal not allowed to make calls.")
-    }
     caller
 }
 
 #[update]
 fn whoami() -> String {
-    ic_cdk::caller().to_string()
+    caller().to_string()
 }
 
 #[update]

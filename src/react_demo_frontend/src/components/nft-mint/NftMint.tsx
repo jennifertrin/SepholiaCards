@@ -4,12 +4,15 @@ import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 import { Sepolia } from "@thirdweb-dev/chains";
 import { providers } from 'ethers'
 import TokenGating from "../token_gating/TokenGating";
+import { token_gating } from "../../../../declarations/token_gating";
+import { useIdentity } from "../../ic/useIdentity";
 
 export default function NftMint() {
     const [sentAddress, setSendAddress] = useState<string>("");
     const [newSigner, setNewSigner] = useState<providers.JsonRpcSigner | undefined>();
     const [buttonLoad, setButtonLoad] = useState<boolean>(false);
     const [sendButtonSuccess, setSendButtonSuccess] = useState<boolean>(false);
+    const [note, setNote] = useState<string>("");
 
     const contractAddress = "0x3BE725676aB26e1C47076C8438E3daFBB08d486B";
     const { contract: HolidayCards } = useContract(contractAddress);
@@ -18,6 +21,15 @@ export default function NftMint() {
     const metamaskConfig = metamaskWallet();
     const connect = useConnect();
 
+    async function addTokenGatedNote(text: string) {
+        if (!identity?.getPrincipal()) return null;
+        const noteInfo = await token_gating.create_note();
+        const noteId = BigInt(noteInfo);
+        await token_gating.update_note(noteId, text);
+        await token_gating.add_user(noteId, identity?.getPrincipal().toString());
+    }
+
+    const { identity } = useIdentity();
 
     useEffect(() => {
         async function initializeSDK() {
@@ -26,7 +38,6 @@ export default function NftMint() {
                 setNewSigner(signer);
             }
         }
-
         initializeSDK();
     }, []);
 
@@ -40,9 +51,9 @@ export default function NftMint() {
         <div className="w-full flex flex-col gap-6">
             <img className="object-contain max-h-96 mx-auto" src="/image.jpg" />
             <div>
-                <div className="md:flex items-center block mx-auto gap-2">
-                    <div className="md:w-1/4 xl:ml-12 flex">
-                        <label className="block font-bold md:text-right mb-1 md:mb-0 pr-4">
+                <div className="md:flex flex-row items-center mx-auto gap-2">
+                    <div className="md:w-1/4 ml-0 xl:ml-12 flex">
+                        <label className="block font-bold mb-1 md:mb-0 pr-4">
                             To wallet address:
                         </label>
                     </div>
@@ -53,10 +64,10 @@ export default function NftMint() {
             </div>
             {sendButtonSuccess ? <p className="text-sm ...">The Card was sent!</p> : null}
             <div className="flex mb-5">
-                <TokenGating />
+                <TokenGating setNote={setNote} />
             </div>
             <button
-                className="block w-1/2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 mx-auto my-10 rounded-xl disabled:bg-slate-200"
+                className="block w-1/2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 mx-auto my-6 rounded-xl disabled:bg-slate-200"
                 disabled={!sentAddress || sentAddress === ''}
                 onClick={async () => {
                     setButtonLoad(true);
@@ -72,6 +83,7 @@ export default function NftMint() {
                         quantity: 1,
                         tokenId: 0,
                     })
+                    await addTokenGatedNote(note);
                     setSendButtonSuccess(true);
                     setButtonLoad(false);
                 }}
